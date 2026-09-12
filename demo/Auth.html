@@ -39,6 +39,7 @@
 <div class="card" id="card"></div>
 
 <script>
+(function(){
 const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY);
 const card = document.getElementById('card');
 const DASHBOARD_URL = "index.html";
@@ -202,6 +203,7 @@ async function saveAnswers(){
   if (error){ errBox.textContent = error.message; return; }
   window.location.href = DASHBOARD_URL;
 }
+})();
 </script>
 </body>
 </html>
