@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from app.routers import users, meters, listings, trades, grid_status, demo, auth, societies
+from app.routers import users, meters, listings, trades, grid_status, demo
+from app.routers.Societies import router as societies_router
 from app.auth import require_user
 
 app = FastAPI(
@@ -35,9 +36,8 @@ app.include_router(meters.router, prefix="/api/meters", tags=["meters"], depende
 app.include_router(listings.router, prefix="/api/listings", tags=["listings"], dependencies=auth_dependencies)
 app.include_router(trades.router, prefix="/api/trades", tags=["trades"], dependencies=auth_dependencies)
 app.include_router(grid_status.router, prefix="/api/grid-status", tags=["grid_status"], dependencies=auth_dependencies)
-app.include_router(societies.router, prefix="/api/societies", tags=["societies"], dependencies=auth_dependencies)
+app.include_router(societies_router, prefix="/api/societies", tags=["societies"], dependencies=auth_dependencies)
 app.include_router(demo.router, prefix="/api/demo", tags=["demo"])
-app.include_router(auth.router, prefix="/api")
 
 
 @app.get("/")
