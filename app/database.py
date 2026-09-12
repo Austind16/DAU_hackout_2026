@@ -4,9 +4,12 @@ Reads credentials from environment variables (see .env.example).
 """
 import os
 from supabase import create_client, Client
+from dotenv import load_dotenv
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("SUPABASE_URL_KEY", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("PUBLISHABLE_KEY", "")
 
 _client: Client | None = None
 
