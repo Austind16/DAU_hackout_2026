@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Local — Neighborhood Energy Map</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root{ --bg:#0F2137; --bg-deep:#0A1826; --panel:#16304C; --panel-line:#23405F; --gold:#F2A65A; --cyan:#4FC3E8; --text:#E8EEF5; --text-dim:#93A9C2; --danger:#E8664F; --ok:#6FCF97; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background: radial-gradient(ellipse at 50% -10%, #16304C 0%, var(--bg) 45%, var(--bg-deep) 100%); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; }
+  h1,h2,h3{ font-family:'Space Grotesk', sans-serif; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:36px 24px 60px; }
+  header{ display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:28px; flex-wrap:wrap; }
+  .brand{ font-size:15px; color:var(--gold); font-weight:600; margin:0 0 6px; }
+  h1{ font-size:32px; font-weight:600; margin:0; }
+  .layout{ display:grid; grid-template-columns:1.5fr 1fr; gap:28px; align-items:start; }
+  @media (max-width:860px){ .layout{ grid-template-columns:1fr; } }
+  .map-card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)); border:1px solid var(--panel-line); border-radius:20px; padding:20px; }
+  .map-card svg{ width:100%; height:auto; display:block; }
+  .legend{ display:flex; gap:20px; flex-wrap:wrap; margin-top:16px; padding-top:16px; border-top:1px solid var(--panel-line); font-size:13px; color:var(--text-dim); }
+  .legend span{ display:flex; align-items:center; gap:7px; }
+  .swatch{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .house{ cursor:pointer; transform: translate(var(--tx), var(--ty)); transform-box:fill-box; transform-origin:center; transition: transform .18s ease; }
+  .house:hover:not(.disabled){ transform: translate(var(--tx), var(--ty)) scale(1.08); }
+  .house.disabled{ cursor:default; }
+  .panel{ background:var(--panel); border:1px solid var(--panel-line); border-radius:20px; padding:24px; min-height:420px; display:flex; flex-direction:column; }
+  .panel h2{ font-size:20px; margin:0 0 4px; }
+  .panel .sub{ color:var(--text-dim); font-size:14px; margin:0 0 20px; }
+  .empty-state{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:var(--text-dim); gap:10px; }
+  .empty-state .icon{ font-size:34px; opacity:.6; }
+  .seller-row{ display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--panel-line); }
+  .avail{ color:var(--ok); font-weight:600; font-size:15px; }
+  .slider-block{ margin:18px 0; }
+  .slider-block label{ font-size:13px; color:var(--text-dim); display:block; margin-bottom:10px; }
+  input[type="range"]{ width:100%; accent-color:var(--gold); }
+  .price-row{ display:flex; justify-content:space-between; align-items:baseline; margin:4px 0 22px; }
+  .price-row .price{ font-size:26px; font-weight:600; font-family:'Space Grotesk',sans-serif; color:var(--gold); }
+  .compare{ display:flex; justify-content:space-between; font-size:13px; color:var(--text-dim); margin-bottom:22px; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:10px; }
+  .compare b{ color:var(--ok); font-weight:600; }
+  button.buy{ margin-top:auto; background:var(--gold); color:#22150a; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:600; font-family:'Space Grotesk',sans-serif; cursor:pointer; }
+  button.buy:hover{ background:#ffb974; }
+  button.buy:disabled{ background:var(--panel-line); color:var(--text-dim); cursor:not-allowed; }
+  .confirm{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; }
+  .confirm .check{ width:56px; height:56px; border-radius:50%; background:rgba(111,207,151,0.15); color:var(--ok); display:flex; align-items:center; justify-content:center; font-size:28px; }
+  .confirm .again{ margin-top:6px; background:none; border:1px solid var(--panel-line); color:var(--text); padding:10px 18px; border-radius:10px; font-size:13px; cursor:pointer; }
+  .loading{ color:var(--text-dim); text-align:center; padding:60px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="brand">GRID LOCAL</p>
+      <h1 id="pageTitle">Neighborhood energy map</h1>
+    </div>
+  </header>
+  <div class="layout">
+    <div class="map-card">
+      <svg viewBox="0 0 560 480" id="mapSvg">
+        <g id="glows"></g>
+        <g id="lines"></g>
+        <g id="houses"></g>
+      </svg>
+      <div class="legend">
+        <span><i class="swatch" style="background:#F2A65A"></i> Solar surplus available</span>
+        <span><i class="swatch" style="background:#4FC3E8"></i> Your house</span>
+        <span><i class="swatch" style="background:#23405F"></i> No surplus right now</span>
+      </div>
+    </div>
+    <div class="panel" id="panel">
+      <div class="empty-state"><div class="icon">☀</div><div>Loading the map…</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY);
+const panel = document.getElementById('panel');
+const housesG = document.getElementById('houses');
+let me = null;         // current auth user
+let myHouse = null;    // this user's row in `houses`
+let houses = [];       // ADJUST: all rows from `houses`
+let listingsByHouseId = {}; // ADJUST: active listings keyed by house id
+
+init();
+
+async function init(){
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session){ window.location.href = "auth.html"; return; }
+  me = session.user;
+
+  // ADJUST table/column names below to match your real schema
+  const { data: houseRows, error: houseErr } = await supabase.from('houses').select('*');
+  const { data: listingRows, error: listingErr } = await supabase
+    .from('listings')
+    .select('*')
+    .eq('status', 'active'); // ADJUST: your active-listing filter, e.g. eq('is_active', true)
+
+  if (houseErr || listingErr){
+    panel.innerHTML = `<div class="empty-state"><div class="icon">⚠</div><div>Could not load data.<br>${(houseErr||listingErr).message}</div></div>`;
+    return;
+  }
+
+  houses = houseRows || [];
+  myHouse = houses.find(h => h.user_id === me.id) || null;
+  (listingRows || []).forEach(l => { listingsByHouseId[l.house_id] = l; }); // ADJUST: FK column name
+
+  renderMap();
+}
+
+function renderMap(){
+  const cols = Math.ceil(Math.sqrt(houses.length)) || 1;
+  const cellW = 500 / cols, cellH = 400 / cols;
+  const startX = 50, startY = 50;
+
+  housesG.innerHTML = '';
+
+  houses.forEach((h, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = startX + col * cellW, y = startY + row * cellH;
+    const listing = listingsByHouseId[h.id]; // ADJUST: PK column name if not "id"
+    const isMe = myHouse && h.id === myHouse.id;
+    const isSolar = !isMe && h.has_solar && listing;
+
+    let roofColor = "#3A5878", strokeColor = "#23405F";
+    if (isSolar){ roofColor = "#F2A65A"; strokeColor = "#F2A65A"; }
+    if (isMe){ roofColor = "#4FC3E8"; strokeColor = "#4FC3E8"; }
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "house" + (isSolar ? "" : " disabled"));
+    g.style.setProperty("--tx", (x - 22) + "px");
+    g.style.setProperty("--ty", (y - 24) + "px");
+    g.innerHTML = `
+      <ellipse cx="22" cy="45" rx="18" ry="3.5" fill="#000" opacity="0.28"/>
+      <rect x="7" y="20" width="30" height="22" rx="2" fill="#16304C" stroke="${strokeColor}" stroke-width="1.4"/>
+      <path d="M22 2 L40 20 L4 20 Z" fill="${roofColor}" stroke="${strokeColor}" stroke-width="1" stroke-linejoin="round"/>
+      <rect x="18" y="30" width="8" height="12" rx="1" fill="#0A1826"/>
+      <text x="22" y="58" text-anchor="middle" font-family="Space Grotesk" font-size="11" font-weight="600" fill="#E8EEF5">${(h.area || h.id || '').toString().slice(0,4)}</text>
+    `;
+    if (isSolar){
+      g.addEventListener('click', () => openTradePanel(h, listing));
+    }
+    housesG.appendChild(g);
+  });
+
+  panel.innerHTML = `<div class="empty-state"><div class="icon">☀</div><div>Tap a gold house on the map<br>to buy its surplus solar power</div></div>`;
+}
+
+const GRID_PRICE = 9.5; // ADJUST: pull from grid_status table if you want this live too
+
+function openTradePanel(house, listing){
+  const maxKwh = listing.kwh_available; // ADJUST column name
+  const pricePerKwh = listing.price_per_kwh; // ADJUST column name
+
+  panel.innerHTML = `
+    <h2>${house.area || 'House'} · ${house.city || ''}</h2>
+    <p class="sub">Solar surplus available right now</p>
+    <div class="seller-row" style="border-top:1px solid var(--panel-line); border-bottom:none; padding-top:0;">
+      <div><div>Available surplus</div><div class="sub" style="margin:0;">Live from listings table</div></div>
+      <div class="avail">${maxKwh.toFixed(1)} kWh</div>
+    </div>
+    <div class="slider-block">
+      <label>Amount to buy: <b id="amtLabel">${(maxKwh/2).toFixed(1)} kWh</b></label>
+      <input type="range" id="amtSlider" min="0.5" max="${maxKwh}" step="0.1" value="${(maxKwh/2).toFixed(1)}">
+    </div>
+    <div class="price-row"><div>Total cost</div><div class="price" id="priceLabel">₹0.00</div></div>
+    <div class="compare" id="compareLabel"></div>
+    <button class="buy" id="buyBtn">Buy from ${house.area || 'this house'}</button>
+    <div class="error" id="tradeErr" style="color:var(--danger); font-size:13px; margin-top:8px;"></div>
+  `;
+
+  const slider = document.getElementById('amtSlider');
+  function update(){
+    const amt = parseFloat(slider.value);
+    document.getElementById('amtLabel').textContent = amt.toFixed(1) + " kWh";
+    const total = amt * pricePerKwh;
+    document.getElementById('priceLabel').textContent = `₹${total.toFixed(2)}`;
+    const gridTotal = amt * GRID_PRICE;
+    const savings = Math.round(((gridTotal - total) / gridTotal) * 100);
+    document.getElementById('compareLabel').innerHTML = `Grid rate: ₹${GRID_PRICE.toFixed(1)}/kWh &nbsp;•&nbsp; <b>${savings}% cheaper</b>`;
+  }
+  slider.oninput = update;
+  update();
+
+  document.getElementById('buyBtn').onclick = async () => {
+    const errBox = document.getElementById('tradeErr');
+    errBox.textContent = '';
+    const amt = parseFloat(slider.value);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch(`${window.API_BASE_URL}/api/trades`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ seller_house_id: house.id, kwh: amt }) // ADJUST field names to match your FastAPI schema
+      });
+      if (!res.ok){
+        const err = await res.json().catch(() => ({}));
+        errBox.textContent = err.detail || 'Trade failed.';
+        return;
+      }
+      panel.innerHTML = `
+        <div class="confirm">
+          <div class="check">✓</div>
+          <h3>Power is on its way</h3>
+          <p>Bought ${amt.toFixed(1)} kWh from ${house.area || 'this house'}.</p>
+          <button class="again" id="againBtn">Back to map</button>
+        </div>`;
+      document.getElementById('againBtn').onclick = () => location.reload();
+    } catch (e){
+      errBox.textContent = 'Could not reach the trading server.';
+    }
+  };
+}
+</script>
+</body>
+</html>

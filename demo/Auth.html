@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Local — Sign in</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root{ --bg:#0F2137; --bg-deep:#0A1826; --panel:#16304C; --panel-line:#23405F; --gold:#F2A65A; --cyan:#4FC3E8; --text:#E8EEF5; --text-dim:#93A9C2; --danger:#E8664F; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; min-height:100vh; background: radial-gradient(ellipse at 50% -10%, #16304C 0%, var(--bg) 45%, var(--bg-deep) 100%); color:var(--text); font-family:'Inter',sans-serif; display:flex; align-items:center; justify-content:center; }
+  h1,h2,h3{ font-family:'Space Grotesk', sans-serif; }
+  .brand{ font-size:14px; letter-spacing:0.02em; color:var(--gold); font-weight:600; margin:0 0 6px; text-align:center; }
+  .card{ width:100%; max-width:460px; background:var(--panel); border:1px solid var(--panel-line); border-radius:20px; padding:32px; margin:24px; }
+  .card h1{ font-size:22px; margin:0 0 4px; }
+  .card .sub{ color:var(--text-dim); font-size:14px; margin:0 0 24px; }
+  label{ font-size:13px; color:var(--text-dim); display:block; margin:14px 0 6px; }
+  input[type="email"], input[type="password"], input[type="text"]{ width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-deep); color:var(--text); font-size:14px; font-family:'Inter',sans-serif; }
+  input:focus{ outline:none; border-color:var(--gold); }
+  .choice-row{ display:flex; gap:10px; margin-top:6px; flex-wrap:wrap; }
+  .choice{ flex:1; min-width:120px; padding:12px 14px; border-radius:10px; border:1px solid var(--panel-line); background:var(--bg-deep); color:var(--text-dim); font-size:14px; cursor:pointer; text-align:left; transition:border-color .15s ease,color .15s ease,background .15s ease; }
+  .choice:hover{ border-color:#3A5878; }
+  .choice.selected{ border-color:var(--gold); color:var(--text); background:rgba(242,166,90,0.10); }
+  button.primary{ width:100%; margin-top:22px; background:var(--gold); color:#22150a; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:600; font-family:'Space Grotesk',sans-serif; cursor:pointer; }
+  button.primary:hover{ background:#ffb974; }
+  .link-row{ text-align:center; margin-top:16px; font-size:13px; color:var(--text-dim); }
+  .link-row a{ color:var(--cyan); text-decoration:none; cursor:pointer; }
+  .error{ color:var(--danger); font-size:13px; margin-top:10px; min-height:16px; }
+  .qlabel{ font-size:12px; color:var(--text-dim); margin-bottom:4px; }
+  .qtitle{ font-size:17px; font-weight:600; margin:0 0 14px; }
+  .step-dots{ display:flex; gap:6px; margin-bottom:20px; }
+  .step-dots span{ width:8px; height:8px; border-radius:50%; background:var(--panel-line); }
+  .step-dots span.active{ background:var(--gold); }
+</style>
+</head>
+<body>
+<div class="card" id="card"></div>
+
+<script>
+const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_PUBLISHABLE_KEY);
+const card = document.getElementById('card');
+const DASHBOARD_URL = "index.html";
+
+let mode = 'login';
+let currentUser = null;
+const answers = { area:'', city:'', pin_code:'', has_solar:null, energy_situation:'', intent:'' };
+let step = 0;
+
+renderAuth();
+
+function renderAuth(){
+  card.innerHTML = `
+    <p class="brand">GRID LOCAL</p>
+    <h1>${mode==='login' ? 'Welcome back' : 'Create your account'}</h1>
+    <p class="sub">${mode==='login' ? 'Sign in to trade energy with your neighbors' : 'Join your society\'s energy network'}</p>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@example.com">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••">
+    <button class="primary" id="submitBtn">${mode==='login' ? 'Sign in' : 'Sign up'}</button>
+    <div class="error" id="errBox"></div>
+    <div class="link-row">
+      ${mode==='login' ? `New here? <a id="toggleMode">Create an account</a>` : `Already have an account? <a id="toggleMode">Sign in</a>`}
+    </div>`;
+  document.getElementById('toggleMode').onclick = () => { mode = mode==='login' ? 'signup' : 'login'; renderAuth(); };
+  document.getElementById('submitBtn').onclick = handleAuthSubmit;
+}
+
+async function handleAuthSubmit(){
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errBox = document.getElementById('errBox');
+  errBox.textContent = '';
+  if (!email || !password){ errBox.textContent = 'Please fill in both fields.'; return; }
+
+  if (mode === 'signup'){
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error){ errBox.textContent = error.message; return; }
+    if (!data.session){
+      // ADJUST: if email confirmation is ON in your Supabase project, there's no session yet.
+      // Simplest fix for the hackathon: turn confirmation OFF in Auth settings.
+      errBox.textContent = 'Check your email to confirm, then log in.';
+      mode = 'login'; renderAuth();
+      return;
+    }
+    currentUser = data.user;
+    step = 0; mode = 'onboarding'; renderOnboarding();
+  } else {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error){ errBox.textContent = error.message; return; }
+    currentUser = data.user;
+    await routeAfterLogin();
+  }
+}
+
+async function routeAfterLogin(){
+  const { data, error } = await supabase
+    .from('houses')                 // ADJUST if your table is named differently
+    .select('id')
+    .eq('user_id', currentUser.id)
+    .maybeSingle();
+
+  if (!error && data){
+    window.location.href = DASHBOARD_URL;
+  } else {
+    step = 0; mode = 'onboarding'; renderOnboarding();
+  }
+}
+
+const totalSteps = 5;
+
+function renderOnboarding(){
+  const dots = Array.from({length: totalSteps}, (_, i) => `<span class="${i===step?'active':''}"></span>`).join('');
+  let body = '';
+
+  if (step === 0){
+    body = `<p class="qlabel">Question 1</p><p class="qtitle">Where do you live?</p>
+      <input type="text" id="area" placeholder="Area" value="${answers.area}">
+      <div style="height:10px"></div>
+      <input type="text" id="city" placeholder="City" value="${answers.city}">`;
+  } else if (step === 1){
+    body = `<p class="qlabel">Question 2</p><p class="qtitle">What is your PIN code?</p>
+      <input type="text" id="pin_code" placeholder="PIN Code" value="${answers.pin_code}">`;
+  } else if (step === 2){
+    body = `<p class="qlabel">Question 3</p><p class="qtitle">Does your house have solar panels?</p>
+      <div class="choice-row">
+        <div class="choice ${answers.has_solar===true?'selected':''}" data-val="true">Yes</div>
+        <div class="choice ${answers.has_solar===false?'selected':''}" data-val="false">No</div>
+      </div>`;
+  } else if (step === 3){
+    body = `<p class="qlabel">Question 4</p><p class="qtitle">What is your current energy situation?</p>
+      <div class="choice-row">
+        <div class="choice ${answers.energy_situation==='enough'?'selected':''}" data-val="enough">I have enough power</div>
+        <div class="choice ${answers.energy_situation==='need_more'?'selected':''}" data-val="need_more">I need additional power</div>
+        <div class="choice ${answers.energy_situation==='power_out'?'selected':''}" data-val="power_out">My power is currently out</div>
+      </div>`;
+  } else if (step === 4){
+    body = `<p class="qlabel">Question 5</p><p class="qtitle">What do you want to do?</p>
+      <div class="choice-row">
+        <div class="choice ${answers.intent==='buy'?'selected':''}" data-val="buy">Buy renewable energy</div>
+        <div class="choice ${answers.intent==='sell'?'selected':''}" data-val="sell">Sell my surplus solar energy</div>
+        <div class="choice ${answers.intent==='both'?'selected':''}" data-val="both">Both</div>
+      </div>`;
+  }
+
+  card.innerHTML = `
+    <p class="brand">GRID LOCAL</p>
+    <div class="step-dots">${dots}</div>
+    ${body}
+    <button class="primary" id="nextBtn">${step===totalSteps-1 ? 'Continue' : 'Next'}</button>
+    <div class="error" id="errBox"></div>`;
+
+  card.querySelectorAll('.choice').forEach(el => {
+    el.onclick = () => {
+      card.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      const val = el.getAttribute('data-val');
+      if (step === 2) answers.has_solar = (val === 'true');
+      if (step === 3) answers.energy_situation = val;
+      if (step === 4) answers.intent = val;
+    };
+  });
+
+  document.getElementById('nextBtn').onclick = handleOnboardingNext;
+}
+
+async function handleOnboardingNext(){
+  const errBox = document.getElementById('errBox');
+  errBox.textContent = '';
+
+  if (step === 0){
+    answers.area = document.getElementById('area').value.trim();
+    answers.city = document.getElementById('city').value.trim();
+    if (!answers.area || !answers.city){ errBox.textContent = 'Please fill in both fields.'; return; }
+  } else if (step === 1){
+    answers.pin_code = document.getElementById('pin_code').value.trim();
+    if (!answers.pin_code){ errBox.textContent = 'Please enter your PIN code.'; return; }
+  } else if (step === 2 && answers.has_solar === null){ errBox.textContent = 'Please choose Yes or No.'; return;
+  } else if (step === 3 && !answers.energy_situation){ errBox.textContent = 'Please choose one option.'; return;
+  } else if (step === 4 && !answers.intent){ errBox.textContent = 'Please choose one option.'; return; }
+
+  if (step < totalSteps - 1){ step++; renderOnboarding(); }
+  else { await saveAnswers(); }
+}
+
+async function saveAnswers(){
+  const errBox = document.getElementById('errBox');
+  // ADJUST: houses table may require other NOT NULL columns (e.g. a house name/number) —
+  // add them here if your insert fails.
+  const { error } = await supabase.from('houses').upsert({
+    user_id: currentUser.id,
+    area: answers.area,
+    city: answers.city,
+    pin_code: answers.pin_code,
+    has_solar: answers.has_solar,
+    energy_situation: answers.energy_situation,
+    intent: answers.intent
+  }, { onConflict: 'user_id' });
+
+  if (error){ errBox.textContent = error.message; return; }
+  window.location.href = DASHBOARD_URL;
+}
+</script>
+</body>
+</html>
