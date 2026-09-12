@@ -89,7 +89,7 @@ init();
 
 async function init(){
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session){ window.location.href = "auth.html"; return; }
+  if (!session){ window.location.href = "Auth.html"; return; }
   me = session.user;
 
   // ADJUST table/column names below to match your real schema
@@ -106,7 +106,7 @@ async function init(){
 
   houses = houseRows || [];
   myHouse = houses.find(h => h.user_id === me.id) || null;
-  (listingRows || []).forEach(l => { listingsByHouseId[l.house_id] = l; }); // ADJUST: FK column name
+  (listingRows || []).forEach(l => { listingsByHouseId[l.house_id] = l; });
 
   renderMap();
 }
@@ -121,9 +121,9 @@ function renderMap(){
   houses.forEach((h, i) => {
     const col = i % cols, row = Math.floor(i / cols);
     const x = startX + col * cellW, y = startY + row * cellH;
-    const listing = listingsByHouseId[h.id]; // ADJUST: PK column name if not "id"
-    const isMe = myHouse && h.id === myHouse.id;
-    const isSolar = !isMe && h.has_solar && listing;
+    const listing = listingsByHouseId[h.house_id];
+    const isMe = myHouse && h.house_id === myHouse.house_id;
+    const isSolar = !isMe && h.has_solar_panels && listing;
 
     let roofColor = "#3A5878", strokeColor = "#23405F";
     if (isSolar){ roofColor = "#F2A65A"; strokeColor = "#F2A65A"; }
@@ -138,7 +138,7 @@ function renderMap(){
       <rect x="7" y="20" width="30" height="22" rx="2" fill="#16304C" stroke="${strokeColor}" stroke-width="1.4"/>
       <path d="M22 2 L40 20 L4 20 Z" fill="${roofColor}" stroke="${strokeColor}" stroke-width="1" stroke-linejoin="round"/>
       <rect x="18" y="30" width="8" height="12" rx="1" fill="#0A1826"/>
-      <text x="22" y="58" text-anchor="middle" font-family="Space Grotesk" font-size="11" font-weight="600" fill="#E8EEF5">${(h.area || h.id || '').toString().slice(0,4)}</text>
+      <text x="22" y="58" text-anchor="middle" font-family="Space Grotesk" font-size="11" font-weight="600" fill="#E8EEF5">${(h.area || h.house_id || '').toString().slice(0,4)}</text>
     `;
     if (isSolar){
       g.addEventListener('click', () => openTradePanel(h, listing));
@@ -152,8 +152,8 @@ function renderMap(){
 const GRID_PRICE = 9.5; // ADJUST: pull from grid_status table if you want this live too
 
 function openTradePanel(house, listing){
-  const maxKwh = listing.kwh_available; // ADJUST column name
-  const pricePerKwh = listing.price_per_kwh; // ADJUST column name
+  const maxKwh = listing.available_kwh;
+  const pricePerKwh = listing.asking_price;
 
   panel.innerHTML = `
     <h2>${house.area || 'House'} · ${house.city || ''}</h2>
@@ -198,7 +198,7 @@ function openTradePanel(house, listing){
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ seller_house_id: house.id, kwh: amt }) // ADJUST field names to match your FastAPI schema
+        body: JSON.stringify({ seller_house_id: house.house_id, kwh: amt })
       });
       if (!res.ok){
         const err = await res.json().catch(() => ({}));

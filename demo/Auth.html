@@ -25,6 +25,7 @@
   .choice.selected{ border-color:var(--gold); color:var(--text); background:rgba(242,166,90,0.10); }
   button.primary{ width:100%; margin-top:22px; background:var(--gold); color:#22150a; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:600; font-family:'Space Grotesk',sans-serif; cursor:pointer; }
   button.primary:hover{ background:#ffb974; }
+  button.primary:disabled{ opacity:0.6; cursor:not-allowed; }
   .link-row{ text-align:center; margin-top:16px; font-size:13px; color:var(--text-dim); }
   .link-row a{ color:var(--cyan); text-decoration:none; cursor:pointer; }
   .error{ color:var(--danger); font-size:13px; margin-top:10px; min-height:16px; }
@@ -73,12 +74,15 @@ async function handleAuthSubmit(){
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const errBox = document.getElementById('errBox');
+  const submitBtn = document.getElementById('submitBtn');
   errBox.textContent = '';
   if (!email || !password){ errBox.textContent = 'Please fill in both fields.'; return; }
 
+  submitBtn.disabled = true;
+
   if (mode === 'signup'){
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error){ errBox.textContent = error.message; return; }
+    if (error){ errBox.textContent = error.message; submitBtn.disabled = false; return; }
     if (!data.session){
       // ADJUST: if email confirmation is ON in your Supabase project, there's no session yet.
       // Simplest fix for the hackathon: turn confirmation OFF in Auth settings.
@@ -90,16 +94,17 @@ async function handleAuthSubmit(){
     step = 0; mode = 'onboarding'; renderOnboarding();
   } else {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error){ errBox.textContent = error.message; return; }
+    if (error){ errBox.textContent = error.message; submitBtn.disabled = false; return; }
     currentUser = data.user;
     await routeAfterLogin();
   }
 }
 
 async function routeAfterLogin(){
+  // NOTE: primary key on `houses` is `house_id`, not `id` — selecting `id` caused a 400 before.
   const { data, error } = await supabase
-    .from('houses')                 // ADJUST if your table is named differently
-    .select('id')
+    .from('houses')
+    .select('house_id')
     .eq('user_id', currentUser.id)
     .maybeSingle();
 
@@ -188,19 +193,36 @@ async function handleOnboardingNext(){
 
 async function saveAnswers(){
   const errBox = document.getElementById('errBox');
-  // ADJUST: houses table may require other NOT NULL columns (e.g. a house name/number) —
-  // add them here if your insert fails.
+  const nextBtn = document.getElementById('nextBtn');
+  errBox.textContent = '';
+  if (nextBtn) nextBtn.disabled = true;
+
+  // NOTE: `houses` requires owner_name (NOT NULL) and uses `has_solar_panels`,
+  // not `has_solar`. We don't collect a real name in this flow yet, so we use
+  // the account email as a placeholder — swap in a real "Your name" question
+  // later if you want something nicer on the dashboard.
+  //
+  // `energy_situation` and `intent` must exist as columns on `houses` for this
+  // to succeed. If you haven't already, run in Supabase SQL Editor:
+  //   alter table houses add column if not exists energy_situation text;
+  //   alter table houses add column if not exists intent text;
+  //   alter table houses add constraint houses_user_id_key unique (user_id);
   const { error } = await supabase.from('houses').upsert({
     user_id: currentUser.id,
+    owner_name: currentUser.email,
     area: answers.area,
     city: answers.city,
     pin_code: answers.pin_code,
-    has_solar: answers.has_solar,
+    has_solar_panels: answers.has_solar,
     energy_situation: answers.energy_situation,
     intent: answers.intent
   }, { onConflict: 'user_id' });
 
-  if (error){ errBox.textContent = error.message; return; }
+  if (error){
+    errBox.textContent = error.message;
+    if (nextBtn) nextBtn.disabled = false;
+    return;
+  }
   window.location.href = DASHBOARD_URL;
 }
 })();
