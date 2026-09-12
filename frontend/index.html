@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Local — Peer-to-peer renewable energy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="topbar" class="hidden">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">Grid Local</div>
+  </div>
+  <div id="steps"></div>
+  <div id="role-pill" class="hidden"></div>
+</div>
+
+<main>
+
+  <!-- ============ PAGE: LOGIN / SIGNUP ============ -->
+  <section id="page-login" class="page">
+    <div class="hero-mark"></div>
+    <div class="hero-title">GRID LOCAL</div>
+    <div class="hero-sub">Neighborhood renewable energy marketplace</div>
+
+    <div class="auth-card card">
+      <div style="text-align:center; margin-bottom:4px;">
+        <div style="font-weight:700; font-size:1.1rem;">Welcome to Grid Local</div>
+        <div class="faint" style="margin-top:6px;">Buy and sell surplus renewable energy within your society.</div>
+      </div>
+      <div class="auth-tabs" style="margin-top:20px;">
+        <div class="auth-tab active" id="tab-login" onclick="setAuthTab('login')">Login</div>
+        <div class="auth-tab" id="tab-signup" onclick="setAuthTab('signup')">Sign Up</div>
+      </div>
+
+      <div id="form-login">
+        <div class="field"><label>Email / Mobile Number</label><input type="text" placeholder="you@example.com" id="li-id"></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" id="li-pw"></div>
+        <button class="btn btn-primary btn-full" onclick="login()">Login</button>
+        <div class="auth-switch">Don't have an account? <b onclick="setAuthTab('signup')">Sign Up</b></div>
+      </div>
+
+      <div id="form-signup" class="hidden">
+        <div class="field"><label>Full Name</label><input type="text" placeholder="Rahul Sharma" id="su-name"></div>
+        <div class="field"><label>Mobile Number</label><input type="text" placeholder="+91 98765 43210" id="su-mobile"></div>
+        <div class="field"><label>Email</label><input type="text" placeholder="you@example.com" id="su-email"></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" id="su-pw"></div>
+        <div class="field"><label>Confirm Password</label><input type="password" placeholder="••••••••" id="su-pw2"></div>
+        <button class="btn btn-primary btn-full" onclick="login()">Create Account</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: INQUIRY ============ -->
+  <section id="page-inquiry" class="page hidden">
+    <div class="page-head">
+      <h1>Tell us about your energy needs</h1>
+      <p>We'll use this information to personalize your local energy marketplace.</p>
+    </div>
+    <div class="card">
+      <div class="q-block">
+        <div class="q-num">Question 1</div>
+        <div class="q-title">Where do you live?</div>
+        <div class="two-col">
+          <input class="area-input" placeholder="Area" id="inq-area" style="padding:12px 14px; border-radius:9px; background:var(--panel); border:1px solid var(--border-soft); color:var(--text);">
+          <input class="area-input" placeholder="City" id="inq-city" style="padding:12px 14px; border-radius:9px; background:var(--panel); border:1px solid var(--border-soft); color:var(--text);">
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Question 2</div>
+        <div class="q-title">What is your PIN code?</div>
+        <input placeholder="PIN Code" id="inq-pin" style="width:100%; padding:12px 14px; border-radius:9px; background:var(--panel); border:1px solid var(--border-soft); color:var(--text);">
+      </div>
+      <div class="q-block">
+        <div class="q-num">Question 3</div>
+        <div class="q-title">Does your house have solar panels?</div>
+        <div class="opt-row" id="opt-solar">
+          <button class="opt" onclick="pick('solar','yes',this)">Yes</button>
+          <button class="opt" onclick="pick('solar','no',this)">No</button>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Question 4</div>
+        <div class="q-title">What is your current energy situation?</div>
+        <div class="opt-row" id="opt-situation">
+          <button class="opt" onclick="pick('situation','enough',this)">I have enough power</button>
+          <button class="opt" onclick="pick('situation','need',this)">I need additional power</button>
+          <button class="opt" onclick="pick('situation','out',this)">My power is currently out</button>
+        </div>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Question 5</div>
+        <div class="q-title">What do you want to do?</div>
+        <div class="opt-row" id="opt-goal">
+          <button class="opt" onclick="pick('goal','buy',this)">Buy renewable energy</button>
+          <button class="opt" onclick="pick('goal','sell',this)">Sell my surplus solar energy</button>
+          <button class="opt" onclick="pick('goal','both',this)">Both</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="submitInquiry()">Continue</button>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: SELECT SOCIETY ============ -->
+  <section id="page-society" class="page hidden">
+    <div class="page-head">
+      <h1>Select your society</h1>
+      <p>We found these societies around your location.</p>
+    </div>
+    <div class="society-grid" id="society-list"></div>
+  </section>
+
+  <!-- ============ PAGE: SOCIETY ENERGY MAP ============ -->
+  <section id="page-map" class="page hidden">
+    <div class="page-head">
+      <h1 id="map-society-name">Green Valley Society</h1>
+      <p>Live neighborhood energy map</p>
+    </div>
+    <div class="map-top">
+      <div class="status-pill"><span class="status-dot"></span> Your supply is down · buy from a neighbor</div>
+      <div class="legend">
+        <span><i style="background:var(--gold);"></i>Solar surplus</span>
+        <span><i style="background:var(--cyan);"></i>Your house</span>
+        <span><i style="background:var(--card); border:1px solid var(--border-soft);"></i>No surplus</span>
+        <span><i style="background:var(--red);"></i>Outage</span>
+      </div>
+    </div>
+    <div class="map-wrap">
+      <div class="house-grid-wrap">
+        <svg id="house-grid-svg" viewBox="0 0 600 520" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-gold" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>
+            <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>
+            <filter id="glow-gold-intense" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" result="blur"/><feComposite in="SourceGraphic" in2="blur" operator="over"/></filter>
+            <filter id="card-soft-shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/><feOffset dx="0" dy="4" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <linearGradient id="goldRoofFront" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#F7C487"/><stop offset="100%" stop-color="#E2892E"/></linearGradient>
+            <linearGradient id="goldRoofSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D97A24"/><stop offset="100%" stop-color="#9E530F"/></linearGradient>
+            <linearGradient id="goldPV" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#243C56"/><stop offset="100%" stop-color="#142436"/></linearGradient>
+            <linearGradient id="cyanRoofFront" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#7BE2FF"/><stop offset="100%" stop-color="#2BBBE5"/></linearGradient>
+            <linearGradient id="cyanRoofSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1E96BA"/><stop offset="100%" stop-color="#0F5E77"/></linearGradient>
+            <linearGradient id="mutedRoofFront" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#2C4867"/><stop offset="100%" stop-color="#1B334B"/></linearGradient>
+            <linearGradient id="mutedRoofSide" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#172A3E"/><stop offset="100%" stop-color="#0F1D2C"/></linearGradient>
+            <linearGradient id="glassCardGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.06"/><stop offset="100%" stop-color="#14171c" stop-opacity="0.55"/></linearGradient>
+            <linearGradient id="glassCardActiveGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#F0A83C" stop-opacity="0.14"/><stop offset="100%" stop-color="#14171c" stop-opacity="0.65"/></linearGradient>
+          </defs>
+          <g id="col-labels" class="font-head" style="font-weight:600; font-size:13px; fill:#5E6E8E;">
+            <text text-anchor="middle" x="135" y="30">Col 1</text>
+            <text text-anchor="middle" x="245" y="30">Col 2</text>
+            <text text-anchor="middle" x="355" y="30">Col 3</text>
+            <text text-anchor="middle" x="465" y="30">Col 4</text>
+          </g>
+          <g id="row-labels" class="font-head" style="font-weight:600; font-size:14px; fill:#5E6E8E;">
+            <text text-anchor="middle" x="52" y="95">A</text>
+            <text text-anchor="middle" x="52" y="205">B</text>
+            <text text-anchor="middle" x="52" y="315">C</text>
+            <text text-anchor="middle" x="52" y="425">D</text>
+          </g>
+          <g id="glass-cards"></g>
+          <g stroke="rgba(255,255,255,.12)" stroke-dasharray="3 4" stroke-width="1.6">
+            <line x1="135" y1="90" x2="465" y2="90"/><line x1="135" y1="200" x2="465" y2="200"/>
+            <line x1="135" y1="310" x2="465" y2="310"/><line x1="135" y1="420" x2="465" y2="420"/>
+            <line x1="135" y1="90" x2="135" y2="420"/><line x1="245" y1="90" x2="245" y2="420"/>
+            <line x1="355" y1="90" x2="355" y2="420"/><line x1="465" y1="90" x2="465" y2="420"/>
+          </g>
+          <g fill="#3D4450" id="junction-dots"></g>
+          <g id="active-flow-group" style="opacity:0; transition:opacity .3s ease;">
+            <path id="flow-underlay" fill="none" filter="url(#glow-gold-intense)" opacity="0.45" stroke="#F0A83C" stroke-linecap="round" stroke-linejoin="round" stroke-width="7"/>
+            <path id="flow-base" fill="none" opacity="0.9" stroke="#E08C36" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5"/>
+            <path id="flow-anim" class="flow-active" fill="none" filter="url(#glow-gold)" stroke="#FFE7BA" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+            <path id="flow-pulse" class="flow-active-pulse" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+          </g>
+          <g id="house-nodes"></g>
+        </svg>
+      </div>
+      <div class="map-side" id="map-side">
+        <div class="card" style="text-align:center; color:var(--text-faint); padding:40px 20px;">
+          Tap a gold house to see its available solar energy.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: AI RECOMMENDATION + QUANTITY ============ -->
+  <section id="page-recommend" class="page hidden">
+    <div class="page-head">
+      <h1>House <span id="rec-house-id"></span></h1>
+      <p id="rec-house-name"></p>
+    </div>
+    <div class="card">
+      <div class="kv-grid">
+        <div><div class="kv-label">Solar Capacity</div><div class="kv-val" id="rec-capacity">5 kW</div></div>
+        <div><div class="kv-label">Available Energy</div><div class="kv-val gold" id="rec-available">6.0 kWh</div></div>
+        <div><div class="kv-label">P2P Price</div><div class="kv-val" id="rec-p2p-price">₹6.20/kWh</div></div>
+        <div><div class="kv-label">Grid Price</div><div class="kv-val" id="rec-grid-price">₹9.50/kWh</div></div>
+      </div>
+
+      <div class="section-title" style="margin-top:6px;">How much energy do you need?</div>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeQty(-0.5)">−</button>
+        <div class="qty-val"><span id="qty-display">5.0</span> kWh</div>
+        <button class="qty-btn" onclick="changeQty(0.5)">+</button>
+      </div>
+      <div class="qty-max">Maximum: <span id="qty-max-label">6.0</span> kWh</div>
+
+      <div class="ai-card">
+        <div class="ai-label"><span class="ai-dot"></span>AI Recommendation</div>
+        <div class="ai-text" id="ai-explanation"></div>
+        <div class="ai-list">
+          <div class="ai-item"><span class="ai-check">✓</span> Recommended Seller — <b id="ai-seller"></b></div>
+          <div class="ai-item"><span class="ai-check">✓</span> Available — <b id="ai-available"></b></div>
+          <div class="ai-item"><span class="ai-check">✓</span> Your requirement — <b id="ai-need"></b></div>
+          <div class="ai-item"><span class="ai-check">✓</span> Estimated saving — <b id="ai-saving"></b></div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="chooseRecommended()">Choose Recommended Seller</button>
+        <button class="btn btn-outline" onclick="showPage('page-map')">Back to Map</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: BUY ENERGY ============ -->
+  <section id="page-buy" class="page hidden">
+    <div class="page-head">
+      <h1>Buy Renewable Energy</h1>
+      <p>Review your purchase before confirming.</p>
+    </div>
+    <div class="card">
+      <div class="sum-row"><span>Seller</span><b id="buy-seller"></b></div>
+      <div class="sum-row"><span>Available</span><b id="buy-available"></b></div>
+      <div class="sum-row"><span>Quantity</span><b id="buy-qty"></b></div>
+      <div class="sum-row"><span>P2P Price</span><b id="buy-price"></b></div>
+      <div class="sum-row"><span>Grid Cost</span><b id="buy-gridcost"></b></div>
+      <div class="sum-row"><span>Total</span><b id="buy-total"></b></div>
+      <div class="sum-row total"><span>You Save</span><span class="save" id="buy-save"></span></div>
+      <div class="btn-row" style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="confirmPurchase()">Confirm Purchase</button>
+        <button class="btn btn-outline" onclick="showPage('page-recommend')">Back</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: BUY CONFIRMED ============ -->
+  <section id="page-buy-confirmed" class="page hidden">
+    <div class="confirm-wrap">
+      <div class="confirm-icon">✓</div>
+      <div class="confirm-title">Energy Purchase Confirmed</div>
+      <div class="confirm-sub" id="bc-summary"></div>
+      <div class="card trade-box">
+        <div class="sum-row"><span>Total</span><b id="bc-total"></b></div>
+        <div class="sum-row"><span>Savings</span><span class="save" id="bc-savings"></span></div>
+        <div class="sum-row"><span>Trade ID</span><b id="bc-tradeid"></b></div>
+        <div class="sum-row"><span>Timestamp</span><b id="bc-time"></b></div>
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn btn-primary" onclick="showPage('page-map')">Back to Society Map</button>
+        <button class="btn btn-outline" onclick="showPage('page-trades')">View Trade</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: SELL SURPLUS ============ -->
+  <section id="page-sell" class="page hidden">
+    <div class="page-head">
+      <h1>Sell Your Solar Surplus</h1>
+      <p>Share your excess renewable energy with nearby homes.</p>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0;">Your Energy</div>
+      <div class="energy-grid">
+        <div class="energy-stat"><div class="kv-label">Solar Capacity</div><div class="kv-val">6 kW</div></div>
+        <div class="energy-stat"><div class="kv-label">Today's Generation</div><div class="kv-val">18.5 kWh</div></div>
+        <div class="energy-stat"><div class="kv-label">Today's Consumption</div><div class="kv-val">10.5 kWh</div></div>
+        <div class="energy-stat"><div class="kv-label">Available Surplus</div><div class="kv-val gold" id="sell-surplus-total">8.0 kWh</div></div>
+      </div>
+
+      <div class="section-title">Energy Available to Sell</div>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeSellQty(-0.5)">−</button>
+        <div class="qty-val"><span id="sell-qty-display">6.0</span> kWh</div>
+        <button class="qty-btn" onclick="changeSellQty(0.5)">+</button>
+      </div>
+      <div class="qty-max">Maximum: 8.0 kWh</div>
+
+      <div class="price-compare">
+        <div class="price-chip"><div class="lbl">Grid Retail</div><div class="val">₹9.50 / kWh</div></div>
+        <div class="price-chip p2p"><div class="lbl">Your P2P Price</div><div class="val">₹6.20 / kWh</div></div>
+        <div class="price-chip"><div class="lbl">Nearby buyers save</div><div class="val" style="color:var(--green);">₹3.30 / kWh</div></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="listSurplus()">List Surplus for Sale</button>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: LISTING LIVE (waiting for a request) ============ -->
+  <section id="page-listing-live" class="page hidden">
+    <div class="page-head">
+      <h1>Your Surplus is Listed</h1>
+      <p>Nearby homes can now see and request your energy.</p>
+    </div>
+    <div class="card" style="text-align:center; padding:40px 24px;">
+      <div class="faint" style="margin-bottom:18px;">Listed <b id="live-qty" style="color:var(--text);"></b> at <b style="color:var(--gold);">₹6.20/kWh</b></div>
+      <div class="faint" style="margin-bottom:26px;">Waiting for a nearby buyer to request your energy…</div>
+      <button class="btn btn-primary" onclick="simulateRequest()">Simulate Incoming Request</button>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: SELLER REQUEST ============ -->
+  <section id="page-request" class="page hidden">
+    <div class="page-head">
+      <h1>New Energy Request</h1>
+      <p>A neighbor wants to buy your listed surplus.</p>
+    </div>
+    <div class="card req-card">
+      <div class="req-badge">Awaiting your response</div>
+      <div class="kv-grid">
+        <div><div class="kv-label">Buyer</div><div class="kv-val" id="req-buyer">House B3</div></div>
+        <div><div class="kv-label">Energy requested</div><div class="kv-val" id="req-qty"></div></div>
+        <div><div class="kv-label">Your available surplus</div><div class="kv-val" id="req-surplus"></div></div>
+        <div><div class="kv-label">Price</div><div class="kv-val" id="req-price">₹6.20/kWh</div></div>
+      </div>
+      <div class="sum-row total"><span>Total</span><b id="req-total"></b></div>
+      <div class="btn-row" style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="acceptRequest()">Accept Request</button>
+        <button class="btn btn-danger" onclick="declineRequest()">Decline</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: REQUEST ACCEPTED ============ -->
+  <section id="page-request-accepted" class="page hidden">
+    <div class="confirm-wrap">
+      <div class="confirm-icon">✓</div>
+      <div class="confirm-title">Energy Request Accepted</div>
+      <div class="confirm-sub" id="ra-summary"></div>
+      <div class="card trade-box">
+        <div class="sum-row"><span>Trade ID</span><b id="ra-tradeid"></b></div>
+        <div class="sum-row"><span>Status</span><b style="color:var(--green);">Confirmed</b></div>
+      </div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn btn-primary" onclick="showPage('page-sell')">Back to My Energy</button>
+        <button class="btn btn-outline" onclick="showPage('page-trades')">View Trade History</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE: TRADE HISTORY ============ -->
+  <section id="page-trades" class="page hidden">
+    <div class="page-head">
+      <h1>Trade History</h1>
+      <p>All your completed energy trades in Green Valley Society.</p>
+    </div>
+    <div class="card" id="trades-list">
+      <div class="faint">No trades yet.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Grid Local — a Hackout26 prototype · demo data, ready to wire into the FastAPI backend</footer>
+
+<!-- Load order matters: state -> api -> nav -> feature modules -> main (boots the app) -->
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/inquiry.js"></script>
+<script src="js/society.js"></script>
+<script src="js/map.js"></script>
+<script src="js/recommend.js"></script>
+<script src="js/buy.js"></script>
+<script src="js/sell.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
